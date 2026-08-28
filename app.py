@@ -1,6 +1,8 @@
 import os
 import streamlit as st
 
+from mentor import build_prompt, call_vertex_ai, fallback_response
+
 st.set_page_config(page_title="Campus Research Mentor", page_icon="🎓", layout="wide")
 
 st.title("Campus Research Mentor")
@@ -73,59 +75,15 @@ with col2:
     local_relevance = st.selectbox("Need local/community relevance?", ["Yes", "No", "Optional"], index=2)
     notes = st.text_area("Extra notes", value="Should be feasible for a student team of 2 and suitable for faculty review.")
 
-prompt = f"""
-Student profile:
-- Name: {student_name}
-- Program level: {program_level}
-- Year/Semester: {year_semester}
-- Areas of interest: {interests}
-- Current skills: {skills}
-- Preferred project type: {project_type}
-- Compute available: {compute}
-- Desired difficulty: {difficulty}
-- Time available: {timeline}
-- Local/community relevance wanted: {local_relevance}
-- Extra notes: {notes}
-
-Task:
-Generate exactly 3 project ideas. Make them distinct.
-For each idea include:
-1. Title
-2. Why this fits the student
-3. Problem statement
-4. Minimum viable implementation
-5. Stretch goal
-6. Dataset / benchmark / source of evaluation
-7. Tools / languages / frameworks
-8. Risks or common mistakes
-9. A 4-week starter plan
-
-End with a short recommendation on which idea should be started first.
-""".strip()
-
-def fallback_response():
-    return """
-## Idea 1: Secure Lab Assistant for Programming Courses
-**Why this fits:** Matches systems security and software engineering interests while staying feasible on laptop-only compute.
-
-## Idea 2: Campus Research Mentor for Topic Scoping
-**Why this fits:** Directly aligned with mentoring bottlenecks in large CS classrooms.
-
-## Idea 3: Lightweight Threat Modeling Assistant for Student Projects
-**Why this fits:** Strong match for systems security interest and final-year project needs.
-
-### Recommended starting point
-Start with **Idea 2** because it is highly feasible and easy to demonstrate clearly.
-""".strip()
-
-def call_vertex_ai(user_prompt: str, project_id: str, location: str, model_name: str) -> str:
-    from google import genai
-    client = genai.Client(vertexai=True, project=project_id, location=location)
-    response = client.models.generate_content(
-        model=model_name,
-        contents=user_prompt,
-    )
-    return response.text
+prompt = build_prompt(
+    {
+        "student_name": student_name, "program_level": program_level,
+        "year_semester": year_semester, "interests": interests,
+        "skills": skills, "project_type": project_type, "compute": compute,
+        "difficulty": difficulty, "timeline": timeline,
+        "local_relevance": local_relevance, "notes": notes,
+    }
+)
 
 if st.button("Generate project ideas", type="primary", use_container_width=True):
     try:
